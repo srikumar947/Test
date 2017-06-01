@@ -10,4 +10,4 @@ cmake ..
 
 make && make install
 
-Now, navigate to python_gui_test.app in build/src/dist/ and open it.
+Now, navigate to csps.app in build/src/dist/ and open it.
