@@ -1,11 +1,9 @@
-install(FILES csps.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+install(FILES csps.py threespace_api.py threespace_utils.py win32_threespace_utils.py DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 install (CODE "execute_process (COMMAND pyinstaller --noconfirm \
-						--clean \
-						--log-level=ERROR \
-						--noupx \
-						--windowed \
-						--onefile \
-						--add-binary /System/Library/Frameworks/Tcl.framework/Versions/8.5/Tcl:./build \
-						--add-binary /System/Library/Frameworks/Tk.framework/Versions/8.5/Tk:./build \
-						csps.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
+							--clean \
+							--log-level=ERROR \
+							--noupx \
+							--onefile \
+							--windowed \
+							csps.py WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})")
