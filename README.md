@@ -1,33 +1,32 @@
 # Test
 
-Update - 
+Installed packages -
 
-Install opencv before compiling.
+Python 2.7.13 (Binary)
+Pip 9.0.1 (Installs automatically when Python 2.7.13 is installed using a binary)
+PySerial 3.3 (Download python wheel of PySerial and then pip install <package>)
+Pillow 4.1.1 (pip install pillow)
+PyInstaller-3.3.dev0; Future 0.16.0; Pypiwin32-219 (pip install https://github.com/pyinstaller/pyinstaller/archive/develop.zip)
+Imutils 0.4.3 (pip install imutils)
+Opencv-python 3.2.0.7; Numpy-1.13.0 (pip install opencv-python)
+Matplotlib 2.0.2; cycler-0.10.0 functools32-3.2.3.post2 pyparsing-2.2.0 python-dateutil-2.6.0 pytz-2017.2 six-1.10.0 (pip install matplotlib)
+CMake 3.9.0 (Binary)
+MinGW (Binary)
+Make 3.8.1 (Binary)
 
-brew tap homebrew/science
 
-brew install opencv
+Changes to be made in API - 
 
-cat ~/.bash_profile | grep PYTHONPATH   (Make sure to add PYTHONPATH)
+Add BT-H3 as an acceptable device in _device_types (threespace_api.py Line 3506 under class TSBTSensor)
 
-ln -s /usr/local/Cellar/opencv/2.4.13.2/lib/python2.7/site-packages/cv.py cv.py
 
-ln -s /usr/local/Cellar/opencv/2.4.13.2/lib/python2.7/site-packages/cv2.so cv2.so
+Changes to be made in csps.py - 
 
-pip install numpy
+Change the COM_PORT to the corresponding value in your computer.
 
-pip install matplotlib
 
-If need be, export the PYTHONPATH from terminal.
+CMake Windows - 
 
-To build, do the following - 
-
-mkdir build
-
-cd build
-
-cmake ..
-
+set PATH=%PATH%;C:\MinGW\bin;C:\Program Files (x86)\GnuWin32\bin;
+cmake -G "Unix Makefiles" ..
 make && make install
-
-Now, navigate to csps.app in build/src/dist/ and open it.
