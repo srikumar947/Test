@@ -12,7 +12,7 @@ import cv2
 #constants for framerates replay duration etc - Ishan
 CONST_videoRateMs = 10
 CONST_replayDuration = 4
-CONST_processingSlack = 0.4
+CONST_processingSlack = 0.7
 CONST_cacheLimit = 1000/CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
 
 #flags to check for replay and recordings - Ishan
@@ -98,23 +98,21 @@ class CSPS(tk.Frame):
         img = Image.fromarray(cv2image)
 
         #keeps caching for preimpact recording - Ishan
-        if record_on == False or True:
-            if len(videoCache) > CONST_cacheLimit/2:
-                videoCache.pop(0)
+        if len(videoCache) > CONST_cacheLimit/2:
+            videoCache.pop(0)
+            videoCache.append(img)
+            #print("limit reached")
+        else:
                 videoCache.append(img)
-                #print("limit reached")
-            else:
-                videoCache.append(img)
-        """
+
         #in the event of an impact triggers postimpact recording into replayCache - Ishan
         global record_on
         if record_on:
             if len(replayCache) < CONST_cacheLimit:
                 replayCache.append(img)
             else:
-                #turn off recording as replay has been recorded
+                #turn off recording as entire replay has been recorded
                 record_on = False
-        """
         
         imgtk = ImageTk.PhotoImage(image=img)
         video.imgtk = imgtk
@@ -130,8 +128,8 @@ class CSPS(tk.Frame):
             button.configure(bg="red")
             button.after(5000, self.bg1)
             #shifts pre impact to replay cache and enables after impact recording - Ishan
-            """global record_on
-            record_on = True"""
+            global record_on
+            record_on = True
             
             global replayCache
             replayCache = videoCache[:]
