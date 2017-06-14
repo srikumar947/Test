@@ -41,7 +41,7 @@ class CSPS(tk.Frame):
         self.grid(sticky="news")
         parent.grid_rowconfigure(0, weight=1)
         parent.grid_columnconfigure(0, weight=1)
-
+        """
         self.com_port = None
         self.device_list = ts_api.getComPorts()
         if len(self.device_list) > 0:
@@ -57,6 +57,7 @@ class CSPS(tk.Frame):
                 self.tssensor = ts_api.TSBTSensor(self.com_port)
         else:
             flag = 1
+		"""
 
     def on_resize(self, event):
         self.replot()
@@ -92,7 +93,6 @@ class CSPS(tk.Frame):
         x, y, z = data[0], data[1], data[2]
         x2, y2, z2 = data2[0], data2[1], data2[2]
         if x > 5 or x < -5 or y > 5 or y < -5 or z > 5 or z < -5 or x2 > 5 or x2 < -5 or y2 > 5 or y2 < -5 or z2 > 5 or z2 < -5:
-
             button.configure(bg="red")
             button.after(5000, self.bg1)
 
@@ -162,11 +162,25 @@ class CSPS(tk.Frame):
         self.canvas.coords('Y2', *coordsY2)
         self.canvas.coords('Z2', *coordsZ2)
 
+    def replay(self):
+        global replay_video
+        _, frame = capture.read()
+        curWidth = replay_video.winfo_width()
+        curHeight = replay_video.winfo_height()
+        maxsize = (curWidth, curHeight)
+        frame = cv2.resize(frame, maxsize)
+        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+
+        img = Image.fromarray(cv2image)
+        imgtk = ImageTk.PhotoImage(image=img)
+        replay_video.imgtk = imgtk
+        replay_video.configure(image=imgtk)
+
     def show(self):
         global flag, flag2
 
         self.video()
-
+        """
         if flag:
             if flag2:
                 flag2 = 0
@@ -174,6 +188,9 @@ class CSPS(tk.Frame):
                 tkMessageBox.showerror("Error", "No sensor data")
         else:
             self.read_serial()
+		"""
+        if flag3:
+            self.replay()
 
         self.after(1, self.show)
 
@@ -203,18 +220,31 @@ def exit():
 
 
 def call():
-    subRoot = tk.Tk()
-    subRoot.title("Details")
+    
+    def setFlag():
+	    global flag3
+	    flag3 = 0
+	    subRoot.destroy()
 
-    text = tk.Label(subRoot)
-    text.config(text="Testing")
-    text.pack()
+    global flag3, replay_video
+    
+    subRoot = tk.Toplevel()
+    subRoot.title("Details")
+    subRoot.columnconfigure(0, weight=1)
+    subRoot.rowconfigure(0, weight=1)
+    subRoot.protocol('WM_DELETE_WINDOW', setFlag)
+    replay_video = tk.Label(subRoot)
+    replay_video.grid(row=0, column=0, sticky="news")
+    replay_video.configure(width=300, height=300)
+    flag3 = 1
 
 
 root = tk.Tk()
 menu = tk.Menu(root)
 flag = 0
 flag2 = 1
+flag3 = 0
+replay_video = None
 root.title("CSPS")
 root.iconbitmap(default='CSPS_HR.ico')
 root.config(menu=menu, background='black')
@@ -232,7 +262,7 @@ menu.add_cascade(label="Help", menu=helpMenu)
 helpMenu.add_command(label="About", command=about)
 
 button = tk.Button(text="Show", height=10, bg='green', fg='black', command=call)
-button.grid(row=1, column=0, columnspan=2, sticky="news")
+button.grid(row=1, column=0, columnspan=3, sticky="news")
 
 video = tk.Label(root)
 video.grid(row=0, column=0, sticky="news")
