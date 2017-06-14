@@ -20,13 +20,21 @@ class CSPS(tk.Frame):
         self.y = [0 for i in range(100)]
         self.z = [0 for i in range(100)]
 
+        self.x2 = [0 for i in range(100)]
+        self.y2 = [0 for i in range(100)]
+        self.z2 = [0 for i in range(100)]
+
         self.canvas = tk.Canvas(self, background="gray15")
         self.canvas.bind("<Configure>", self.on_resize)
         self.canvas.grid(sticky="news")
 
-        self.canvas.create_line((0, 0, 0, 0), tag='X', fill='red', width=1)
-        self.canvas.create_line((0, 0, 0, 0), tag='Y', fill='blue', width=1)
-        self.canvas.create_line((0, 0, 0, 0), tag='Z', fill='green', width=1)
+        self.canvas.create_line((5, 5, 5, 5), tag='X', fill='red', width=1)
+        self.canvas.create_line((5, 5, 5, 5), tag='Y', fill='blue', width=1)
+        self.canvas.create_line((5, 5, 5, 5), tag='Z', fill='green', width=1)
+
+        self.canvas.create_line((-5, -5, -5, -5), tag='X2', fill='red', width=1)
+        self.canvas.create_line((-5, -5, -5, -5), tag='Y2', fill='blue', width=1)
+        self.canvas.create_line((-5, -5, -5, -5), tag='Z2', fill='green', width=1)
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -64,7 +72,7 @@ class CSPS(tk.Frame):
 
     def video(self):
         _, frame = capture.read()
-        frame = cv2.flip(frame, 1)
+        # frame = cv2.flip(frame, 1)
 
         curWidth = video.winfo_width()
         curHeight = video.winfo_height()
@@ -80,17 +88,18 @@ class CSPS(tk.Frame):
     def read_serial(self):
         global button
         data = self.tssensor.getCorrectedGyroRate()
-
+        data2 = self.tssensor.getCorrectedAccelerometerVector()
         x, y, z = data[0], data[1], data[2]
+        x2, y2, z2 = data2[0], data2[1], data2[2]
+        if x > 5 or x < -5 or y > 5 or y < -5 or z > 5 or z < -5 or x2 > 5 or x2 < -5 or y2 > 5 or y2 < -5 or z2 > 5 or z2 < -5:
 
-        if x > 5 or x < -5 or y > 5 or y < -5 or z > 5 or z < -5:
             button.configure(bg="red")
             button.after(5000, self.bg1)
 
-        self.add(data)
+        self.add(data, data2)
         self.after_idle(self.replot)
 
-    def add(self, data):
+    def add(self, data, data2):
         self.x.append(float(data[0]))
         self.x = self.x[-100:]
 
@@ -99,6 +108,15 @@ class CSPS(tk.Frame):
 
         self.z.append(float(data[2]))
         self.z = self.z[-100:]
+
+        self.x2.append(float(data2[0]))
+        self.x2 = self.x2[-100:]
+
+        self.y2.append(float(data2[1]))
+        self.y2 = self.y2[-100:]
+
+        self.z2.append(float(data2[2]))
+        self.z2 = self.z2[-100:]
 
         return
 
@@ -110,23 +128,39 @@ class CSPS(tk.Frame):
         max_Y = max(self.y) + 1e-5
         max_Z = max(self.z) + 1e-5
 
+        max_X2 = max(self.x2) + 1e-5
+        max_Y2 = max(self.y2) + 1e-5
+        max_Z2 = max(self.z2) + 1e-5
+
         coordsX, coordsY, coordsZ = [], [], []
+        coordsX2, coordsY2, coordsZ2 = [], [], []
 
         for n in range(0, 100):
             x = (w * n) / 100
 
             coordsX.append(x)
-            coordsX.append(h - ((h * (self.x[n] + 100)) / 200.0))
+            coordsX.append(h - ((h * (self.x[n] + 150)) / 200.0))
 
             coordsY.append(x)
-            coordsY.append(h - ((h * (self.y[n] + 100)) / 200.0))
+            coordsY.append(h - ((h * (self.y[n] + 150)) / 200.0))
 
             coordsZ.append(x)
-            coordsZ.append(h - ((h * (self.z[n] + 100)) / 200.0))
+            coordsZ.append(h - ((h * (self.z[n] + 150)) / 200.0))
+
+            coordsX2.append(x)
+            coordsX2.append(h - ((h * (self.x2[n] + 50)) / 200.0))
+            coordsY2.append(x)
+            coordsY2.append(h - ((h * (self.y2[n] + 50)) / 200.0))
+            coordsZ2.append(x)
+            coordsZ2.append(h - ((h * (self.z2[n] + 50)) / 200.0))
 
         self.canvas.coords('X', *coordsX)
         self.canvas.coords('Y', *coordsY)
         self.canvas.coords('Z', *coordsZ)
+
+        self.canvas.coords('X2', *coordsX2)
+        self.canvas.coords('Y2', *coordsY2)
+        self.canvas.coords('Z2', *coordsZ2)
 
     def show(self):
         global flag, flag2
@@ -182,7 +216,7 @@ menu = tk.Menu(root)
 flag = 0
 flag2 = 1
 root.title("CSPS")
-# root.iconbitmap(default='CSPS_HR.ico')
+root.iconbitmap(default='CSPS_HR.ico')
 root.config(menu=menu, background='black')
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
@@ -197,13 +231,13 @@ helpMenu = tk.Menu(menu)
 menu.add_cascade(label="Help", menu=helpMenu)
 helpMenu.add_command(label="About", command=about)
 
-button = tk.Button(text="Show", bg='green', fg='black', command=call)
+button = tk.Button(text="Show", height=10, bg='green', fg='black', command=call)
 button.grid(row=1, column=0, columnspan=2, sticky="news")
 
 video = tk.Label(root)
 video.grid(row=0, column=0, sticky="news")
 video.configure(width=300, height=300)
-capture = cv2.VideoCapture(0)
+capture = cv2.VideoCapture(1)
 
 sensor = tk.Label(root)
 sensor.grid(row=0, column=1, sticky="news")
