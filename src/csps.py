@@ -249,51 +249,63 @@ class CSPS(tk.Frame):
 
 
 def hello():
-    subRoot = tk.Tk()
-    subRoot.title("Welcome")
+    hello = tk.Tk()
+    hello.title("Welcome")
 
-    text = tk.Label(subRoot)
+    text = tk.Label(hello)
     text.config(text="Welcome to CSPS")
     text.pack()
-    subRoot.after(5000, lambda: subRoot.destroy())
+    hello.after(5000, lambda: hello.destroy())
 
 
 def about():
-    subRoot = tk.Tk()
-    subRoot.title("About")
+    about = tk.Tk()
+    about.title("About")
 
-    text = tk.Label(subRoot)
+    text = tk.Label(about)
     text.config(text="You are using CSPS v1.0")
     text.pack()
-    subRoot.after(5000, lambda: subRoot.destroy())
+    about.after(5000, lambda: about.destroy())
 
 
 def exit():
     root.destroy()
 
 
-def call():
-    
-    def setFlag():
-	    global flag3
-	    flag3 = 0
-	    subRoot.destroy()
+def setFlag():
+    global flag3
+    flag3 = 0
+    subRoot.destroy()
 
-    global flag3, replay_video
+
+def call():
+    global flag3, replay_video, subRoot, replay_sensor
+    
+    if flag3 == 1:
+        setFlag()
 
     #flag indicating replay is on - Ishan
     global replay_on
     replay_on = True
-
+    
     subRoot = tk.Toplevel()
     subRoot.title("Details")
     subRoot.columnconfigure(0, weight=1)
     subRoot.rowconfigure(0, weight=1)
     subRoot.protocol('WM_DELETE_WINDOW', setFlag)
+    
     replay_video = tk.Label(subRoot)
     replay_video.grid(row=0, column=0, sticky="news")
     replay_video.configure(width=300, height=300)
+    
+    replay_sensor = tk.Label(subRoot)
+    replay_sensor.grid(row=0, column=1, sticky="news")
+    # replay_sensor.configure(width=300, height=300)
+    replay_sensor.grid_rowconfigure(0, weight=1)
+    replay_sensor.grid_columnconfigure(0, weight=1)
+
     flag3 = 1
+    # flag4 = 1
 
 
 root = tk.Tk()
@@ -301,7 +313,16 @@ menu = tk.Menu(root)
 flag = 0
 flag2 = 1
 flag3 = 0
+flag4 = 0
 replay_video = None
+replay_sensor = None
+subRoot = None
+tx1 = []
+ty1 = []
+tz1 = []
+tx2 = []
+ty2 = []
+tz2 = []
 root.title("CSPS")
 root.iconbitmap(default='CSPS_HR.ico')
 root.config(menu=menu, background='black')
@@ -336,5 +357,3 @@ obj = CSPS(sensor)
 obj.show()
 
 root.mainloop()
-
-
