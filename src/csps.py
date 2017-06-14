@@ -9,6 +9,20 @@ import time
 import sys
 import cv2
 
+#constants for framerates replay duration etc - Ishan
+CONST_videoRateMs = 10
+CONST_replayDuration = 4
+CONST_processingSlack = 0.4
+CONST_cacheLimit = 1000/CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
+
+#flags to check for replay and recordings - Ishan
+replay_on = False
+record_on = False
+
+#videocache and replay cache and current frame in replay - Ishan
+videoCache = []
+replayCache = []
+replay_frame = 0
 
 class CSPS(tk.Frame):
     def __init__(self, parent):
@@ -41,7 +55,7 @@ class CSPS(tk.Frame):
         self.grid(sticky="news")
         parent.grid_rowconfigure(0, weight=1)
         parent.grid_columnconfigure(0, weight=1)
-        """
+        
         self.com_port = None
         self.device_list = ts_api.getComPorts()
         if len(self.device_list) > 0:
@@ -57,7 +71,7 @@ class CSPS(tk.Frame):
                 self.tssensor = ts_api.TSBTSensor(self.com_port)
         else:
             flag = 1
-		"""
+		
 
     def on_resize(self, event):
         self.replot()
@@ -82,6 +96,26 @@ class CSPS(tk.Frame):
         cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
 
         img = Image.fromarray(cv2image)
+
+        #keeps caching for preimpact recording - Ishan
+        if record_on == False or True:
+            if len(videoCache) > CONST_cacheLimit/2:
+                videoCache.pop(0)
+                videoCache.append(img)
+                #print("limit reached")
+            else:
+                videoCache.append(img)
+        """
+        #in the event of an impact triggers postimpact recording into replayCache - Ishan
+        global record_on
+        if record_on:
+            if len(replayCache) < CONST_cacheLimit:
+                replayCache.append(img)
+            else:
+                #turn off recording as replay has been recorded
+                record_on = False
+        """
+        
         imgtk = ImageTk.PhotoImage(image=img)
         video.imgtk = imgtk
         video.configure(image=imgtk)
@@ -95,6 +129,14 @@ class CSPS(tk.Frame):
         if x > 5 or x < -5 or y > 5 or y < -5 or z > 5 or z < -5 or x2 > 5 or x2 < -5 or y2 > 5 or y2 < -5 or z2 > 5 or z2 < -5:
             button.configure(bg="red")
             button.after(5000, self.bg1)
+            #shifts pre impact to replay cache and enables after impact recording - Ishan
+            """global record_on
+            record_on = True"""
+            
+            global replayCache
+            replayCache = videoCache[:]
+            global replay_frame
+            replay_frame = 0
 
         self.add(data, data2)
         self.after_idle(self.replot)
@@ -162,25 +204,36 @@ class CSPS(tk.Frame):
         self.canvas.coords('Y2', *coordsY2)
         self.canvas.coords('Z2', *coordsZ2)
 
+    #Code to replay a impact recording - Ishan
     def replay(self):
         global replay_video
-        _, frame = capture.read()
-        curWidth = replay_video.winfo_width()
-        curHeight = replay_video.winfo_height()
-        maxsize = (curWidth, curHeight)
-        frame = cv2.resize(frame, maxsize)
-        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
-
-        img = Image.fromarray(cv2image)
+        global replay_frame
+        global replay_on
+        
+        if(len(replayCache)  < 1):
+            replay_video.configure(text="No Impact so far")
+            replay_on = False
+            return
+        
+        img = replayCache[replay_frame]
+        #print(replay_frame)
+        
+        
         imgtk = ImageTk.PhotoImage(image=img)
         replay_video.imgtk = imgtk
         replay_video.configure(image=imgtk)
+        replay_frame += 1
 
+        #once youve replayed the recording stop and reset - Ishan
+        if replay_frame == len(replayCache):
+            replay_on = False
+            replay_frame = 0
+            
     def show(self):
         global flag, flag2
 
         self.video()
-        """
+        
         if flag:
             if flag2:
                 flag2 = 0
@@ -188,8 +241,8 @@ class CSPS(tk.Frame):
                 tkMessageBox.showerror("Error", "No sensor data")
         else:
             self.read_serial()
-		"""
-        if flag3:
+		
+        if flag3 and replay_on:
             self.replay()
 
         self.after(1, self.show)
@@ -227,7 +280,11 @@ def call():
 	    subRoot.destroy()
 
     global flag3, replay_video
-    
+
+    #flag indicating replay is on - Ishan
+    global replay_on
+    replay_on = True
+
     subRoot = tk.Toplevel()
     subRoot.title("Details")
     subRoot.columnconfigure(0, weight=1)
@@ -267,7 +324,7 @@ button.grid(row=1, column=0, columnspan=3, sticky="news")
 video = tk.Label(root)
 video.grid(row=0, column=0, sticky="news")
 video.configure(width=300, height=300)
-capture = cv2.VideoCapture(1)
+capture = cv2.VideoCapture(0)
 
 sensor = tk.Label(root)
 sensor.grid(row=0, column=1, sticky="news")
@@ -279,4 +336,5 @@ obj = CSPS(sensor)
 obj.show()
 
 root.mainloop()
+
 
