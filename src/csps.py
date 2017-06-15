@@ -1,6 +1,7 @@
 from __future__ import print_function, division, absolute_import
 import threespace_api as ts_api
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageFont, ImageDraw
+import matplotlib.pyplot as plt
 from serial import Serial
 import Tkinter as tk
 import tkMessageBox
@@ -8,21 +9,29 @@ import numpy as np
 import time
 import sys
 import cv2
+import math
 
-#constants for framerates replay duration etc - Ishan
+# constants for framerates replay duration etc - Ishan
 CONST_videoRateMs = 10
-CONST_replayDuration = 4
+CONST_replayDuration = 1
 CONST_processingSlack = 0.7
-CONST_cacheLimit = 1000/CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
+CONST_slowDown = 2.0
+CONST_cacheLimit = 1000 / CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
 
-#flags to check for replay and recordings - Ishan
+# flags to check for replay and recordings - Ishan
 replay_on = False
 record_on = False
 
-#videocache and replay cache and current frame in replay - Ishan
+# videocache and replay cache and current frame in replay - Ishan
 videoCache = []
 replayCache = []
 replay_frame = 0
+
+gyroCache = []
+accelCache = []
+gyroCacheReplay = []
+accelCacheReplay = []
+
 
 class CSPS(tk.Frame):
     def __init__(self, parent):
@@ -55,7 +64,7 @@ class CSPS(tk.Frame):
         self.grid(sticky="news")
         parent.grid_rowconfigure(0, weight=1)
         parent.grid_columnconfigure(0, weight=1)
-        
+
         self.com_port = None
         self.device_list = ts_api.getComPorts()
         if len(self.device_list) > 0:
@@ -67,11 +76,9 @@ class CSPS(tk.Frame):
             if not self.com_port:
                 flag = 1
             else:
-                print ("true")
                 self.tssensor = ts_api.TSBTSensor(self.com_port)
         else:
             flag = 1
-		
 
     def on_resize(self, event):
         self.replot()
@@ -86,8 +93,10 @@ class CSPS(tk.Frame):
         button.configure(bg="green")
 
     def video(self):
+        global record_on
+
         _, frame = capture.read()
-        # frame = cv2.flip(frame, 1)
+        frame = cv2.flip(frame, 1)
 
         curWidth = video.winfo_width()
         curHeight = video.winfo_height()
@@ -97,43 +106,58 @@ class CSPS(tk.Frame):
 
         img = Image.fromarray(cv2image)
 
-        #keeps caching for preimpact recording - Ishan
-        if len(videoCache) > CONST_cacheLimit/2:
+        # keeps caching for preimpact recording - Ishan
+        if len(videoCache) > CONST_cacheLimit / 2:
             videoCache.pop(0)
             videoCache.append(img)
-            #print("limit reached")
+            # print("limit reached")
         else:
-                videoCache.append(img)
+            videoCache.append(img)
 
-        #in the event of an impact triggers postimpact recording into replayCache - Ishan
-        global record_on
+        # in the event of an impact triggers postimpact recording into replayCache - Ishan
         if record_on:
             if len(replayCache) < CONST_cacheLimit:
                 replayCache.append(img)
             else:
-                #turn off recording as entire replay has been recorded
+                # turn off recording as entire replay has been recorded
                 record_on = False
-        
+
         imgtk = ImageTk.PhotoImage(image=img)
         video.imgtk = imgtk
         video.configure(image=imgtk)
 
     def read_serial(self):
-        global button
+        global button, replayCache, record_on, gyroCacheReplay, accelCacheReplay, replay_frame
         data = self.tssensor.getCorrectedGyroRate()
         data2 = self.tssensor.getCorrectedAccelerometerVector()
+
         x, y, z = data[0], data[1], data[2]
         x2, y2, z2 = data2[0], data2[1], data2[2]
+
+        if len(gyroCache) > CONST_cacheLimit / 2:
+            gyroCache.pop(0)
+            accelCache.pop(0)
+            gyroCache.append(data)
+            accelCache.append(data2)
+        else:
+            gyroCache.append(data)
+            accelCache.append(data2)
+
+        if record_on:
+            if len(gyroCacheReplay) < CONST_cacheLimit:
+                gyroCacheReplay.append(data)
+                accelCacheReplay.append(data2)
+            else:
+                record_on = False
+
         if x > 5 or x < -5 or y > 5 or y < -5 or z > 5 or z < -5 or x2 > 5 or x2 < -5 or y2 > 5 or y2 < -5 or z2 > 5 or z2 < -5:
             button.configure(bg="red")
-            button.after(5000, self.bg1)
-            #shifts pre impact to replay cache and enables after impact recording - Ishan
-            global record_on
+            button.after(2000, self.bg1)
+            # shifts pre impact to replay cache and enables after impact recording - Ishan
             record_on = True
-            
-            global replayCache
             replayCache = videoCache[:]
-            global replay_frame
+            gyroCacheReplay = gyroCache[:]
+            accelCacheReplay = accelCache[:]
             replay_frame = 0
 
         self.add(data, data2)
@@ -157,8 +181,6 @@ class CSPS(tk.Frame):
 
         self.z2.append(float(data2[2]))
         self.z2 = self.z2[-100:]
-
-        return
 
     def replot(self):
         w = self.winfo_width()
@@ -202,36 +224,81 @@ class CSPS(tk.Frame):
         self.canvas.coords('Y2', *coordsY2)
         self.canvas.coords('Z2', *coordsZ2)
 
-    #Code to replay a impact recording - Ishan
+    # Code to replay a impact recording - Ishan
     def replay(self):
-        global replay_video
-        global replay_frame
-        global replay_on
+        global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2
         
-        if(len(replayCache)  < 1):
+        if (len(replayCache) < 1):
             replay_video.configure(text="No Impact so far")
             replay_on = False
             return
-        
-        img = replayCache[replay_frame]
-        #print(replay_frame)
-        
-        
+
+        img = replayCache[int(replay_frame)]
         imgtk = ImageTk.PhotoImage(image=img)
         replay_video.imgtk = imgtk
         replay_video.configure(image=imgtk)
-        replay_frame += 1
 
-        #once youve replayed the recording stop and reset - Ishan
+        w = replay_sensor_graph.winfo_width()
+        h = replay_sensor_graph.winfo_height()
+
+        coordsX, coordsY, coordsZ = [], [], []
+        coordsX2, coordsY2, coordsZ2 = [], [], []
+
+        tx1.pop(0)
+        ty1.pop(0)
+        tz1.pop(0)
+
+        tx2.pop(0)
+        ty2.pop(0)
+        tz2.pop(0)
+
+        tx1.append(gyroCacheReplay[int(replay_frame)][0])
+        ty1.append(gyroCacheReplay[int(replay_frame)][1])
+        tz1.append(gyroCacheReplay[int(replay_frame)][2])
+
+        tx2.append(accelCacheReplay[int(replay_frame)][0])
+        ty2.append(accelCacheReplay[int(replay_frame)][1])
+        tz2.append(accelCacheReplay[int(replay_frame)][2])
+
+        for n in range(0, 100):
+            x = (w * n) / 100
+
+            coordsX.append(x)
+            coordsX.append(h - ((h * (tx1[n] + 150)) / 200.0))
+
+            coordsY.append(x)
+            coordsY.append(h - ((h * (ty1[n] + 150)) / 200.0))
+
+            coordsZ.append(x)
+            coordsZ.append(h - ((h * (tz1[n] + 150)) / 200.0))
+
+            coordsX2.append(x)
+            coordsX2.append(h - ((h * (tx2[n] + 50)) / 200.0))
+            coordsY2.append(x)
+            coordsY2.append(h - ((h * (ty2[n] + 50)) / 200.0))
+            coordsZ2.append(x)
+            coordsZ2.append(h - ((h * (tz2[n] + 50)) / 200.0))
+
+        replay_sensor_graph.coords('X', *coordsX)
+        replay_sensor_graph.coords('Y', *coordsY)
+        replay_sensor_graph.coords('Z', *coordsZ)
+
+        replay_sensor_graph.coords('X2', *coordsX2)
+        replay_sensor_graph.coords('Y2', *coordsY2)
+        replay_sensor_graph.coords('Z2', *coordsZ2)
+
+        replay_frame += 1 / CONST_slowDown
+
+        # once youve replayed the recording stop and reset - Ishan
         if replay_frame == len(replayCache):
             replay_on = False
             replay_frame = 0
-            
+
     def show(self):
         global flag, flag2
 
         self.video()
-        
+
         if flag:
             if flag2:
                 flag2 = 0
@@ -239,7 +306,7 @@ class CSPS(tk.Frame):
                 tkMessageBox.showerror("Error", "No sensor data")
         else:
             self.read_serial()
-		
+
         if flag3 and replay_on:
             self.replay()
 
@@ -277,33 +344,48 @@ def setFlag():
 
 
 def call():
-    global flag3, replay_video, subRoot, replay_sensor
-    
+    global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on
+
     if flag3 == 1:
         setFlag()
 
-    #flag indicating replay is on - Ishan
-    global replay_on
+    # flag indicating replay is on - Ishan
     replay_on = True
-    
+    flag3 = 1
+
     subRoot = tk.Toplevel()
     subRoot.title("Details")
     subRoot.columnconfigure(0, weight=1)
     subRoot.rowconfigure(0, weight=1)
     subRoot.protocol('WM_DELETE_WINDOW', setFlag)
-    
+
     replay_video = tk.Label(subRoot)
     replay_video.grid(row=0, column=0, sticky="news")
     replay_video.configure(width=300, height=300)
-    
+
     replay_sensor = tk.Label(subRoot)
     replay_sensor.grid(row=0, column=1, sticky="news")
-    # replay_sensor.configure(width=300, height=300)
+    replay_sensor.configure(width=300, height=300)
     replay_sensor.grid_rowconfigure(0, weight=1)
     replay_sensor.grid_columnconfigure(0, weight=1)
 
-    flag3 = 1
-    # flag4 = 1
+    replay_sensor_graph = tk.Canvas(replay_sensor, background="gray15")
+    replay_sensor_graph.grid(sticky="news")
+    replay_sensor_graph.grid_rowconfigure(0, weight=1)
+    replay_sensor_graph.grid_columnconfigure(0, weight=1)
+
+    replay_sensor_graph.create_line((0, 0, 0, 0), tag='X', fill='red', width=1)
+    replay_sensor_graph.create_line((0, 0, 0, 0), tag='Y', fill='blue', width=1)
+    replay_sensor_graph.create_line((0, 0, 0, 0), tag='Z', fill='green', width=1)
+
+    replay_sensor_graph.create_line((0, 0, 0, 0), tag='X2', fill='red', width=1)
+    replay_sensor_graph.create_line((0, 0, 0, 0), tag='Y2', fill='blue', width=1)
+    replay_sensor_graph.create_line((0, 0, 0, 0), tag='Z2', fill='green', width=1)
+
+    simul = tk.Label(subRoot)
+    simul.grid(row=0, column=2, sticky="news")
+    simul.configure(width=300, height=300)
+
 
 
 root = tk.Tk()
@@ -311,16 +393,17 @@ menu = tk.Menu(root)
 flag = 0
 flag2 = 1
 flag3 = 0
-flag4 = 0
+tx1 = [0 for i in range(100)]
+ty1 = [0 for i in range(100)]
+tz1 = [0 for i in range(100)]
+tx2 = [0 for i in range(100)]
+ty2 = [0 for i in range(100)]
+tz2 = [0 for i in range(100)]
 replay_video = None
 replay_sensor = None
+replay_sensor_graph = None
+simul = None
 subRoot = None
-tx1 = []
-ty1 = []
-tz1 = []
-tx2 = []
-ty2 = []
-tz2 = []
 root.title("CSPS")
 root.iconbitmap(default='CSPS_HR.ico')
 root.config(menu=menu, background='black')
@@ -337,7 +420,7 @@ helpMenu = tk.Menu(menu)
 menu.add_cascade(label="Help", menu=helpMenu)
 helpMenu.add_command(label="About", command=about)
 
-button = tk.Button(text="Show", height=10, bg='green', fg='black', command=call)
+button = tk.Button(text="Show", height=8, bg='green', fg='black', command=call)
 button.grid(row=1, column=0, columnspan=3, sticky="news")
 
 video = tk.Label(root)
@@ -353,5 +436,5 @@ sensor.grid_columnconfigure(0, weight=1)
 
 obj = CSPS(sensor)
 obj.show()
-
+print(CONST_cacheLimit)
 root.mainloop()
