@@ -10,6 +10,7 @@ import time
 import sys
 import cv2
 import math
+import random
 
 # constants for framerates replay duration etc - Ishan
 CONST_videoRateMs = 10
@@ -127,7 +128,7 @@ class CSPS(tk.Frame):
         video.configure(image=imgtk)
 
     def read_serial(self):
-        global button, replayCache, record_on, gyroCacheReplay, accelCacheReplay, replay_frame
+        global button, replayCache, record_on, gyroCacheReplay, accelCacheReplay, replay_frame, again
         data = self.tssensor.getCorrectedGyroRate()
         data2 = self.tssensor.getCorrectedAccelerometerVector()
 
@@ -159,6 +160,7 @@ class CSPS(tk.Frame):
             gyroCacheReplay = gyroCache[:]
             accelCacheReplay = accelCache[:]
             replay_frame = 0
+            again = False
 
         self.add(data, data2)
         self.after_idle(self.replot)
@@ -226,8 +228,8 @@ class CSPS(tk.Frame):
 
     # Code to replay a impact recording - Ishan
     def replay(self):
-        global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2
-        
+        global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, again, simul
+
         if (len(replayCache) < 1):
             replay_video.configure(text="No Impact so far")
             replay_on = False
@@ -288,11 +290,29 @@ class CSPS(tk.Frame):
         replay_sensor_graph.coords('Z2', *coordsZ2)
 
         replay_frame += 1 / CONST_slowDown
+        offset = 15
+        number = offset + replay_frame
+        filename = "./Simulation/frame" + str(int(number)) + ".jpg"
+        frame = cv2.imread(filename)
+        cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
+        img = Image.fromarray(cv2image)
+        img = img.resize((300, 300), Image.ANTIALIAS)
+        imgtk = ImageTk.PhotoImage(image=img)
+        simul.imgtk = imgtk
+        simul.configure(image=imgtk)
 
         # once youve replayed the recording stop and reset - Ishan
         if replay_frame == len(replayCache):
             replay_on = False
             replay_frame = 0
+            again = True
+            tx1 = [0 for i in range(100)]
+            ty1 = [0 for i in range(100)]
+            tz1 = [0 for i in range(100)]
+
+            tx2 = [0 for i in range(100)]
+            ty2 = [0 for i in range(100)]
+            tz2 = [0 for i in range(100)]
 
     def show(self):
         global flag, flag2
@@ -342,9 +362,13 @@ def setFlag():
     flag3 = 0
     subRoot.destroy()
 
+def pickRandomImage():
+    j = random.randint(1,11)
+    img = cv2.imread("./BS/Capture_"+str(j)+".png")
+    cv2.imshow('Img',img)
 
 def call():
-    global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on
+    global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on, simul
 
     if flag3 == 1:
         setFlag()
@@ -386,6 +410,8 @@ def call():
     simul.grid(row=0, column=2, sticky="news")
     simul.configure(width=300, height=300)
 
+    button1 = tk.Button(subRoot, text="Detailed Brain Reuslts", height=8, bg='black', fg='white', command=pickRandomImage)
+    button1.grid(row=1, column=0, columnspan=3, sticky="news")
 
 
 root = tk.Tk()
@@ -393,6 +419,7 @@ menu = tk.Menu(root)
 flag = 0
 flag2 = 1
 flag3 = 0
+again = True
 tx1 = [0 for i in range(100)]
 ty1 = [0 for i in range(100)]
 tz1 = [0 for i in range(100)]
