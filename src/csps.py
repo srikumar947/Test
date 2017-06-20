@@ -380,6 +380,9 @@ def pickRandomImage():
         img = cv2.imread("./BS/Capture_"+str(j)+".png")
         cv2.imshow('Img',img)
 
+def genVideo():
+        print ("Placeholder")
+
 def call():
         global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on, simul
 
@@ -431,6 +434,9 @@ def call():
 
         button1 = tk.Button(subRoot, text="Detailed Brain Reuslts", height=8, bg='black', fg='white', command=pickRandomImage)
         button1.grid(row=1, column=0, columnspan=3, sticky="news")
+
+        button2 = tk.Button(subRoot, text="Generate Video", height=5, bg='black', fg='white', command=genVideo)
+        button2.grid(row=2, column=0, columnspan=3, sticky="news")
 
 
 root = tk.Tk()
