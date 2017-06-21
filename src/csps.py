@@ -86,10 +86,10 @@ class CSPS(tk.Frame):
 					self.tsdongle = ts_api.TSDongle(self.com_port)
 					self.tssensor = self.tsdongle.getSensorFromDongle(0)
 					break
-				if self.port_info.dev_type == 'WL':
-			        self.com_port = self.cp
-			        self.tssensor = ts_api.TSWLSensor(self.com_port)
-			        break
+				if self.port_info.dev_type == 'WL-H3' or self.port_info.dev_type == 'WL':
+					self.com_port = self.cp
+					self.tssensor = ts_api.TSWLSensor(self.com_port)
+					break
 			if not self.com_port:
 				flag = 1
 		else:
@@ -547,20 +547,20 @@ def genVideo():
 		filename = "./Simulation/frame" + str(int(number)) + ".jpg"
 		simulFrame = cv2.imread(filename)
 		simulFrame = cv2.resize(simulFrame, maxsize)
-		
+
 		combinedFrame = np.concatenate((videoFrame, sensorFrame, simulFrame), axis=1)
 		out.write(combinedFrame)
-		
+
 		if cv2.waitKey(1) & 0xFF == ord('q'):
 			break
 
 		curFrame += 1
 
-
 	# time to generate video may need to be removed later
 	elapsed = float(timeit.default_timer() - start_time)
 	print(elapsed)
 	out.release()
+
 
 root = tk.Tk()
 menu = tk.Menu(root)
