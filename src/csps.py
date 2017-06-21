@@ -338,6 +338,8 @@ class CSPS(tk.Frame):
 		dim = self._canvas()
 
 		grabcanvas = ImageGrab.grab(bbox=dim)
+		fname = "./gv/out" + str(replay_frame) + ".jpg"
+		grabcanvas.save(fname)
 		if len(graph_video) > CONST_cacheLimit:
 			graph_video.pop(0)
 			graph_video.append(grabcanvas)
@@ -374,8 +376,8 @@ class CSPS(tk.Frame):
 			tz2 = [0 for i in range(100)]
 
 	def _canvas(self):
-		x = replay_sensor_graph.winfo_rootx() + replay_sensor_graph.winfo_x()
-		y = replay_sensor_graph.winfo_rooty() + replay_sensor_graph.winfo_y()
+		x = replay_sensor_graph.winfo_rootx() 
+		y = replay_sensor_graph.winfo_rooty() 
 		x1 = x + replay_sensor_graph.winfo_width()
 		y1 = y + replay_sensor_graph.winfo_height()
 		box = (x, y, x1, y1)
@@ -496,7 +498,6 @@ def call():
 	simul = tk.Label(subRoot)
 	simul.grid(row=1, column=2, sticky="news")
 	simul.configure(width=400, height=300)
-
 	timer = tk.Label(subRoot, height=2)
 	timer.grid(row=0, sticky="news")
 
