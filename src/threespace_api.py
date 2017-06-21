@@ -2501,7 +2501,7 @@ class TSWLSensor(_TSSensor):
     
     reverse_command_dict = dict(map(lambda x: [x[1][0], x[0]], command_dict.items()))
     
-    _device_types = ["WL", "WL-HH"]
+    _device_types = ["WL", "WL-HH", "WL-H3"]
     def __new__(cls, com_port=None, baudrate=_baudrate, timestamp_mode=TSS_TIMESTAMP_SENSOR, logical_id=None, dongle=None):
         if com_port is None and logical_id is None and dongle is None:
             return None
