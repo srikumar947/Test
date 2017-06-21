@@ -19,7 +19,9 @@ CONST_replayDuration = 1
 CONST_processingSlack = 0.7
 CONST_slowDown = 1.0
 CONST_cacheLimit = 1000 / CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
-
+CONST_panelWidth = 300
+CONST_panelHeight = 300
+	
 # flags to check for replay and recordings - Ishan
 replay_on = False
 record_on = False
@@ -251,7 +253,6 @@ class CSPS(tk.Frame):
 			replay_video.configure(text="No Impact so far")
 			replay_on = False
 			return
-
 		rframe = replayCache[int(replay_frame)]
 
 		curWidth = replay_video.winfo_width()
@@ -335,16 +336,22 @@ class CSPS(tk.Frame):
 		replay_sensor_graph.coords('T2_1', *coordsT2_1)
 		replay_sensor_graph.coords('T2_2', *coordsT2_2)
 
-		dim = self._canvas()
+		image1 = Image.new("RGB", (300, 300), gray15)
 
-		grabcanvas = ImageGrab.grab(bbox=dim)
-		fname = "./gv/out" + str(replay_frame) + ".jpg"
-		grabcanvas.save(fname)
-		if len(graph_video) > CONST_cacheLimit:
-			graph_video.pop(0)
-			graph_video.append(grabcanvas)
-		else:
-			graph_video.append(grabcanvas)
+		draw = ImageDraw.Draw(image1)
+
+		draw.line(coordsX, fill="red")
+
+		draw.line(coordsY, fill="blue")
+		draw.line(coordsZ, fill="green")
+
+		draw.line(coordsX2, fill="red")
+		draw.line(coordsY2, fill="blue")
+		draw.line(coordsZ2, fill="green")
+
+		image1.save("out1234.jpg")
+
+		graph_video.append(cv2.imread("out1234.jpg"))
 
 		replay_frame += 1 / CONST_slowDown
 
@@ -374,14 +381,6 @@ class CSPS(tk.Frame):
 			tx2 = [0 for i in range(100)]
 			ty2 = [0 for i in range(100)]
 			tz2 = [0 for i in range(100)]
-
-	def _canvas(self):
-		x = replay_sensor_graph.winfo_rootx() 
-		y = replay_sensor_graph.winfo_rooty() 
-		x1 = x + replay_sensor_graph.winfo_width()
-		y1 = y + replay_sensor_graph.winfo_height()
-		box = (x, y, x1, y1)
-		return box
 
 	def show(self):
 		global flag, flag2
@@ -463,18 +462,17 @@ def call():
 	subRoot.rowconfigure(0, weight=1)
 	subRoot.protocol('WM_DELETE_WINDOW', setFlag)
 	# subRoot.attributes("-fullscreen", True)
-
 	file = tk.Menu(subMenu)
 	subMenu.add_cascade(label="File", menu=file)
 	file.add_command(label="Exit", command=exit_sub)
 
 	replay_video = tk.Label(subRoot)
 	replay_video.grid(row=1, column=0, sticky="news")
-	replay_video.configure(width=300, height=300)
+	replay_video.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 
 	replay_sensor = tk.Label(subRoot)
 	replay_sensor.grid(row=1, column=1, sticky="news")
-	replay_sensor.configure(width=300, height=300)
+	replay_sensor.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 	replay_sensor.grid_rowconfigure(0, weight=1)
 	replay_sensor.grid_columnconfigure(0, weight=1)
 
@@ -510,13 +508,11 @@ def call():
 
 
 def genVideo():
-	C_WIDTH = 300
-	C_HEIGHT = 300
-	maxsize = (C_WIDTH, C_HEIGHT)
+	maxsize = (CONST_panelWidth, CONST_panelHeight)
 
 	fourcc = cv2.VideoWriter_fourcc(*'XVID')
 	# needs to be make 3 X width after adding sensor frame
-	out = cv2.VideoWriter('VideoOfImpact.avi', fourcc, 20.0, (C_WIDTH * 3, C_HEIGHT))
+	out = cv2.VideoWriter('VideoOfImpact.avi', fourcc, 20.0, (int(CONST_panelWidth * 3.33), CONST_panelHeight))
 
 	curFrame = 0
 	start_time = timeit.default_timer()
@@ -547,7 +543,7 @@ def genVideo():
 			number = 104
 		filename = "./Simulation/frame" + str(int(number)) + ".jpg"
 		simulFrame = cv2.imread(filename)
-		simulFrame = cv2.resize(simulFrame, maxsize)
+		simulFrame = cv2.resize(simulFrame, (int(CONST_panelWidth * 1.33),CONST_panelHeight))
 
 		combinedFrame = np.concatenate((videoFrame, sensorFrame, simulFrame), axis=1)
 		out.write(combinedFrame)
@@ -587,7 +583,7 @@ root.config(menu=menu, background='black')
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
 # root.attributes("-fullscreen", True)
-
+gray15 = (40, 40, 40)
 fileMenu = tk.Menu(menu)
 menu.add_cascade(label="File", menu=fileMenu)
 fileMenu.add_command(label="Hello", command=hello)
@@ -603,15 +599,15 @@ button.grid(row=1, column=0, columnspan=3, sticky="news")
 
 video = tk.Label(root)
 video.grid(row=0, column=0, sticky="news")
-video.configure(width=300, height=300)
+video.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 capture = cv2.VideoCapture(0)
 
 sensor = tk.Label(root)
 sensor.grid(row=0, column=1, sticky="news")
-sensor.configure(width=300, height=300)
+sensor.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 sensor.grid_rowconfigure(0, weight=1)
 sensor.grid_columnconfigure(0, weight=1)
-
+print(root.winfo_screenwidth(), root.winfo_screenheight())
 obj = CSPS(sensor)
 obj.show()
 root.mainloop()
