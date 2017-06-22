@@ -21,6 +21,8 @@ CONST_slowDown = 1.0
 CONST_cacheLimit = 1000 / CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
 CONST_panelWidth = 300
 CONST_panelHeight = 300
+CONST_videoWidth = 1100
+CONST_videoHeight = 1100
 	
 # flags to check for replay and recordings - Ishan
 replay_on = False
@@ -193,6 +195,7 @@ class CSPS(tk.Frame):
 		self.z2 = self.z2[-100:]
 
 	def replot(self):
+		global record_on
 		w = self.winfo_width()
 		h = self.winfo_height()
 
@@ -245,9 +248,10 @@ class CSPS(tk.Frame):
 		self.canvas.coords('T2_1', *coordsT2_1)
 		self.canvas.coords('T2_2', *coordsT2_2)
 
+
 	# Code to replay a impact recording - Ishan
 	def replay(self):
-		global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, timer, simul
+		global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, timer, simul, button2, number123
 
 		if (len(replayCache) < 1):
 			replay_video.configure(text="No Impact so far")
@@ -336,22 +340,70 @@ class CSPS(tk.Frame):
 		replay_sensor_graph.coords('T2_1', *coordsT2_1)
 		replay_sensor_graph.coords('T2_2', *coordsT2_2)
 
-		image1 = Image.new("RGB", (300, 300), gray15)
+		w = CONST_videoWidth
+		h = CONST_videoHeight
+		
+		coordsX, coordsY, coordsZ = [], [], []
+		coordsX2, coordsY2, coordsZ2 = [], [], []
+		coordsT1_1, coordsT1_2, coordsT2_1, coordsT2_2 = [], [], [], []
 
+		for n in range(0, 100):
+			x = (w * n) / 100
+
+			coordsX.append(x)
+			coordsX.append(h - ((h * (tx1[n] + 150)) / 200.0))
+
+			coordsY.append(x)
+			coordsY.append(h - ((h * (ty1[n] + 150)) / 200.0))
+
+			coordsZ.append(x)
+			coordsZ.append(h - ((h * (tz1[n] + 150)) / 200.0))
+
+			coordsT1_1.append(x)
+			coordsT1_1.append(h - ((h * (145)) / 200.0))
+
+			coordsT1_2.append(x)
+			coordsT1_2.append(h - ((h * (155)) / 200.0))
+
+			coordsX2.append(x)
+			coordsX2.append(h - ((h * (tx2[n] + 50)) / 200.0))
+
+			coordsY2.append(x)
+			coordsY2.append(h - ((h * (ty2[n] + 50)) / 200.0))
+
+			coordsZ2.append(x)
+			coordsZ2.append(h - ((h * (tz2[n] + 50)) / 200.0))
+
+			coordsT2_1.append(x)
+			coordsT2_1.append(h - ((h * (45)) / 200.0))
+
+			coordsT2_2.append(x)
+			coordsT2_2.append(h - ((h * (55)) / 200.0))
+
+		
+		image1 = Image.new("RGB", (CONST_videoWidth, CONST_videoHeight), gray15)
 		draw = ImageDraw.Draw(image1)
 
-		draw.line(coordsX, fill="red")
+		draw.line(coordsX, fill="blue", width=0)
+		draw.line(coordsY, fill="red", width=0)
+		draw.line(coordsZ, fill="green", width=0)
+		draw.line(coordsT1_1, fill="white", width=1)
+		draw.line(coordsT1_2, fill="white", width=1)
 
-		draw.line(coordsY, fill="blue")
-		draw.line(coordsZ, fill="green")
+		draw.line(coordsX2, fill="blue", width=0)
+		draw.line(coordsY2, fill="red", width=0)
+		draw.line(coordsZ2, fill="green", width=0)
+		draw.line(coordsT2_1, fill="white", width=1)
+		draw.line(coordsT2_2, fill="white", width=1)
 
-		draw.line(coordsX2, fill="red")
-		draw.line(coordsY2, fill="blue")
-		draw.line(coordsZ2, fill="green")
-
-		image1.save("out1234.jpg")
-
-		graph_video.append(cv2.imread("out1234.jpg"))
+		fname = "./gg/asd" + str(number123) + ".jpg"
+		image1.save(fname)
+		number123 += 1
+		if len(graph_video) > CONST_cacheLimit:
+			graph_video.pop(0)
+			graph_video.append(image1)
+		else:
+			graph_video.append(image1)
 
 		replay_frame += 1 / CONST_slowDown
 
@@ -374,6 +426,7 @@ class CSPS(tk.Frame):
 		if replay_frame == len(replayCache):
 			replay_on = False
 			replay_frame = 0
+			button2.configure(state="normal")
 			tx1 = [0 for i in range(100)]
 			ty1 = [0 for i in range(100)]
 			tz1 = [0 for i in range(100)]
@@ -446,7 +499,7 @@ def pickRandomImage():
 
 
 def call():
-	global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on, simul, timer
+	global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on, simul, timer, button2
 
 	if flag3 == 1:
 		setFlag()
@@ -505,45 +558,32 @@ def call():
 
 	button2 = tk.Button(subRoot, text="Generate Video", height=3, bg='black', fg='white', command=genVideo)
 	button2.grid(row=3, column=0, columnspan=3, sticky="news")
+	button2.configure(state="disabled")
 
 
 def genVideo():
-	maxsize = (CONST_panelWidth, CONST_panelHeight)
-
+	maxsize = (CONST_videoWidth, CONST_videoHeight)
 	fourcc = cv2.VideoWriter_fourcc(*'XVID')
-	# needs to be make 3 X width after adding sensor frame
-	out = cv2.VideoWriter('VideoOfImpact.avi', fourcc, 20.0, (int(CONST_panelWidth * 3.33), CONST_panelHeight))
+	
+	out = cv2.VideoWriter('VideoOfImpact.avi', fourcc, 10.0, (int(CONST_videoWidth * 3.33), CONST_videoHeight))
 
 	curFrame = 0
-	start_time = timeit.default_timer()
-	# videoCache needs to be changed to replayCache in condition
+
 	while (curFrame < len(replayCache)):
-		# get video portion (needs to change to replayCache
+
 		videoFrame = replayCache[curFrame]
 		videoFrame = cv2.resize(videoFrame, maxsize)
-		# print (videoFrame)
-		# needs to be code added for sensorFrame retrieval and resize
+
 		sensorFrame = np.array(graph_video[curFrame], dtype=np.uint8)
 		sensorFrame = cv2.resize(sensorFrame, maxsize)
 
-		# get simul images it works but long run
-		# needs to be rewritted so as not to be hardcoded by numbers
-		"""
-		bframeStart = 0
-		bframeEnd = 104
-		number = bframeStart + curFrame/len(replayCache)*(bframeEnd-bframeStart)
-
-		filename = "./Simulation/frame" + str(int(number)) + ".jpg"
-		simulFrame = cv2.imread(filename)
-		simulFrame = cv2.resize(simulFrame, maxsize)
-		"""
 		offset = 15
 		number = offset + curFrame
 		if number > 104:
 			number = 104
 		filename = "./Simulation/frame" + str(int(number)) + ".jpg"
 		simulFrame = cv2.imread(filename)
-		simulFrame = cv2.resize(simulFrame, (int(CONST_panelWidth * 1.33),CONST_panelHeight))
+		simulFrame = cv2.resize(simulFrame, (int(CONST_videoWidth * 1.33), CONST_videoHeight))
 
 		combinedFrame = np.concatenate((videoFrame, sensorFrame, simulFrame), axis=1)
 		out.write(combinedFrame)
@@ -553,11 +593,16 @@ def genVideo():
 
 		curFrame += 1
 
-	# time to generate video may need to be removed later
-	elapsed = float(timeit.default_timer() - start_time)
-	print(elapsed)
 	out.release()
-
+	"""
+	height, width, layers =  np.array(graph_video[0]).shape
+	video = cv2.VideoWriter("demo3_4.avi", fourcc, 10, (width,height))
+	i = 0
+	while i < 70:
+		video.write(cv2.cvtColor(np.array(graph_video[i]), cv2.COLOR_RGB2BGR))
+		i += 1
+	video.release()
+	"""
 
 root = tk.Tk()
 menu = tk.Menu(root)
@@ -577,13 +622,16 @@ graph_video = []
 simul = None
 timer = None
 subRoot = None
+button2 = None
+gray15 = (40, 40, 40)
+number123 = 0
 root.title("CSPS")
 root.iconbitmap(default='CSPS_HR.ico')
 root.config(menu=menu, background='black')
 root.columnconfigure(0, weight=1)
 root.rowconfigure(0, weight=1)
 # root.attributes("-fullscreen", True)
-gray15 = (40, 40, 40)
+
 fileMenu = tk.Menu(menu)
 menu.add_cascade(label="File", menu=fileMenu)
 fileMenu.add_command(label="Hello", command=hello)
@@ -607,7 +655,6 @@ sensor.grid(row=0, column=1, sticky="news")
 sensor.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 sensor.grid_rowconfigure(0, weight=1)
 sensor.grid_columnconfigure(0, weight=1)
-print(root.winfo_screenwidth(), root.winfo_screenheight())
 obj = CSPS(sensor)
 obj.show()
 root.mainloop()
