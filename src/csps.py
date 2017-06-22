@@ -23,31 +23,26 @@ CONST_panelWidth = 300
 CONST_panelHeight = 300
 CONST_videoWidth = 1100
 CONST_videoHeight = 1100
-##
 CONST_ImpactGroupTimeThreshold = 1
         
 # flags to check for replay and recordings - Ishan
 replay_on = False
 record_on = False
 
-# videocache and replay global time cache and current frame in replay - Ishan
+# videocache and replay cache and current frame in replay - Ishan
 videoCache = []
-###
 replayCache = []
 timeCache = []
 replayTimeCache = []
 replay_frame = 0
 #keeps track of impact times - Ishan
 impactsAt = []
-###
+start_time = timeit.default_timer()
 
 gyroCache = []
 accelCache = []
 gyroCacheReplay = []
 accelCacheReplay = []
-
-
-start_time = timeit.default_timer()
 
 
 class CSPS(tk.Frame):
@@ -64,7 +59,7 @@ class CSPS(tk.Frame):
                 self.y2 = [0 for i in range(100)]
                 self.z2 = [0 for i in range(100)]
 
-                self.canvas = tk.Canvas(self, background="gray15")
+                self.canvas = tk.Canvas(self, background="black")
                 self.canvas.bind("<Configure>", self.on_resize)
                 self.canvas.grid(sticky="news")
 
@@ -73,12 +68,13 @@ class CSPS(tk.Frame):
                 self.canvas.create_line((0, 0, 0, 0), tag='Z', fill='green', width=1)
                 self.canvas.create_line((0, 0, 0, 0), tag='T1_1', fill='white', dash=(1,), width=1)
                 self.canvas.create_line((0, 0, 0, 0), tag='T1_2', fill='white', dash=(1,), width=1)
-
+                #self.text1 = self.canvas.create_text(200, 25, tag='text1', fill="white", text="Rotational Acceleration \n (Radians/sec)")
                 self.canvas.create_line((0, 0, 0, 0), tag='X2', fill='red', width=1)
                 self.canvas.create_line((0, 0, 0, 0), tag='Y2', fill='blue', width=1)
                 self.canvas.create_line((0, 0, 0, 0), tag='Z2', fill='green', width=1)
                 self.canvas.create_line((0, 0, 0, 0), tag='T2_1', fill='white', dash=(1,), width=1)
                 self.canvas.create_line((0, 0, 0, 0), tag='T2_2', fill='white', dash=(1,), width=1)
+                #self.text2 = self.canvas.create_text(200, 175, tag='text1', fill="white", text="Linear Acceleration \n (Meters/sec^2)")
 
                 self.grid_rowconfigure(0, weight=1)
                 self.grid_columnconfigure(0, weight=1)
@@ -115,33 +111,33 @@ class CSPS(tk.Frame):
 
         def bg1(self):
                 global button
-                button.configure(bg="green", state="active")
+                button.configure(bg="green", state="normal")
 
         def video(self):
-                global record_on,replayCache,videoCache,replayTimeCache,timeCache
+                global record_on,videoCache,replayCache,timeCache,replayTimeCache
 
                 _, frame = capture.read()
                 frame = cv2.flip(frame, 1)
 
                 # keeps caching for preimpact recording - Ishan
                 if len(videoCache) > CONST_cacheLimit / 2:
-                        videoCache.pop(0)
-                        videoCache.append(frame)
-                        timeCache.pop(0)
-                        timeCache.append(timeit.default_timer()-start_time)
-                # print("limit reached")
+                    videoCache.pop(0)
+                    videoCache.append(frame)
+                    timeCache.pop(0)
+                    timeCache.append(timeit.default_timer()-start_time)
+                    # print("limit reached")
                 else:
-                        videoCache.append(frame)
-                        timeCache.append(timeit.default_timer()-start_time)
+                    videoCache.append(frame)
+                    timeCache.append(timeit.default_timer()-start_time)
 
                 # in the event of an impact triggers postimpact recording into replayCache - Ishan
                 if record_on:
-                        if len(replayCache) < CONST_cacheLimit:
-                                replayCache.append(frame)
-                                replayTimeCache.append(timeit.default_timer()-start_time)
-                        else:
-                                # turn off recording as entire replay has been recorded
-                                record_on = False
+                    if len(replayCache) < CONST_cacheLimit:
+                        replayCache.append(frame)
+                        replayTimeCache.append(timeit.default_timer()-start_time)
+                    else:
+                        # turn off recording as entire replay has been recorded
+                        record_on = False
 
                 curWidth = video.winfo_width()
                 curHeight = video.winfo_height()
@@ -154,10 +150,9 @@ class CSPS(tk.Frame):
                 video.configure(image=imgtk)
 
         def read_serial(self):
-                global button, replayCache, record_on, gyroCacheReplay, accelCacheReplay, replay_frame, menu, fileMenu, replayTimeCache, impactsAt
+                global button, replayCache, record_on, gyroCacheReplay, accelCacheReplay, replay_frame, menu, fileMenu, replayTimeCache,impactsAt
                 data = self.tssensor.getCorrectedGyroRate()
                 data2 = self.tssensor.getCorrectedAccelerometerVector()
-
                 x, y, z = data[0], data[1], data[2]
                 x2, y2, z2 = data2[0], data2[1], data2[2]
 
@@ -184,16 +179,18 @@ class CSPS(tk.Frame):
                         record_on = True
                         impactsAt.append(timeit.default_timer()-start_time)
 
-                        #discart impacts prior to some time
+                        #discart impacts too far back - Ishan
                         while float(impactsAt[len(impactsAt)-1]-impactsAt[0]) > CONST_ImpactGroupTimeThreshold:
-                                impactsAt.pop(0)
-                        
+                            impactsAt.pop(0)
+
+                        #copy precoreded data cache at impact                        
                         replayCache = videoCache[:]
                         replayTimeCache = timeCache[:]
-                        gyroCacheReplay = gyroCache[:]
-                        accelCacheReplay = accelCache[:]
                         replay_frame = 0
 
+                        gyroCacheReplay = gyroCache[:]
+                        accelCacheReplay = accelCache[:]
+                        
                 self.add(data, data2)
                 self.after_idle(self.replot)
 
@@ -273,14 +270,14 @@ class CSPS(tk.Frame):
 
         # Code to replay a impact recording - Ishan
         def replay(self):
-                global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, timer, simul, button2, number123
+                global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, timer, simul, flag4
 
                 if (len(replayCache) < 1):
                         replay_video.configure(text="No Impact so far")
                         replay_on = False
                         return
                 rframe = replayCache[int(replay_frame)]
-                
+
                 curWidth = replay_video.winfo_width()
                 curHeight = replay_video.winfo_height()
                 maxsize = (curWidth, curHeight)
@@ -403,18 +400,18 @@ class CSPS(tk.Frame):
                         coordsT2_2.append(h - ((h * (55)) / 200.0))
 
                 
-                image1 = Image.new("RGB", (CONST_videoWidth, CONST_videoHeight), gray15)
+                image1 = Image.new("RGB", (CONST_videoWidth, CONST_videoHeight), "black")
                 draw = ImageDraw.Draw(image1)
 
-                draw.line(coordsX, fill="blue", width=0)
-                draw.line(coordsY, fill="red", width=0)
-                draw.line(coordsZ, fill="green", width=0)
+                draw.line(coordsX, fill="blue", width=1)
+                draw.line(coordsY, fill="red", width=1)
+                draw.line(coordsZ, fill="green", width=1)
                 draw.line(coordsT1_1, fill="white", width=1)
                 draw.line(coordsT1_2, fill="white", width=1)
 
-                draw.line(coordsX2, fill="blue", width=0)
-                draw.line(coordsY2, fill="red", width=0)
-                draw.line(coordsZ2, fill="green", width=0)
+                draw.line(coordsX2, fill="blue", width=1)
+                draw.line(coordsY2, fill="red", width=1)
+                draw.line(coordsZ2, fill="green", width=1)
                 draw.line(coordsT2_1, fill="white", width=1)
                 draw.line(coordsT2_2, fill="white", width=1)
 
@@ -428,7 +425,7 @@ class CSPS(tk.Frame):
                 impactStartTime = str(int(float(impactsAt[0]-replayTimeCache[0])*1000))+"ms"
                 impactEndTime = str(int(float(impactsAt[len(impactsAt)-1]-replayTimeCache[0])*1000))+"ms"
                 timer.configure(text= "Impact from " + impactStartTime +  " to " + impactEndTime + " (Time elapsed: " + msTimer + ")", fg="red", bg="black")
-                
+                           
 
                 replay_frame += 1 / CONST_slowDown
 
@@ -445,11 +442,12 @@ class CSPS(tk.Frame):
                 simul.imgtk = imgtk
                 simul.configure(image=imgtk)
 
+                
                 # once youve replayed the recording stop and reset - Ishan
                 if replay_frame == len(replayCache):
                         replay_on = False
                         replay_frame = 0
-                        button2.configure(state="normal")
+                        flag4 = 1
                         tx1 = [0 for i in range(100)]
                         ty1 = [0 for i in range(100)]
                         tz1 = [0 for i in range(100)]
@@ -497,10 +495,6 @@ def about():
         about.after(5000, lambda: about.destroy())
 
 
-def Impact():
-        print("Test")
-
-
 def exit():
         root.destroy()
 
@@ -512,6 +506,9 @@ def exit_sub():
 def setFlag():
         global flag3
         flag3 = 0
+        if flag4:
+                if tkMessageBox.askyesno("Video", "Do you want to generate a video? If yes, kindly wait for some time..."):
+                        genVideo()
         subRoot.destroy()
 
 
@@ -522,7 +519,7 @@ def pickRandomImage():
 
 
 def call():
-        global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on, simul, timer, button2
+        global flag3, replay_video, subRoot, replay_sensor_graph, replay_sensor, replay_on, simul, timer, button1
 
         if flag3 == 1:
                 setFlag()
@@ -552,7 +549,7 @@ def call():
         replay_sensor.grid_rowconfigure(0, weight=1)
         replay_sensor.grid_columnconfigure(0, weight=1)
 
-        replay_sensor_graph = tk.Canvas(replay_sensor, background="gray15")
+        replay_sensor_graph = tk.Canvas(replay_sensor, background="black")
         replay_sensor_graph.grid(sticky="news")
         replay_sensor_graph.grid_rowconfigure(0, weight=1)
         replay_sensor_graph.grid_columnconfigure(0, weight=1)
@@ -579,10 +576,6 @@ def call():
                                                 command=pickRandomImage)
         button1.grid(row=2, column=0, columnspan=3, sticky="news")
 
-        button2 = tk.Button(subRoot, text="Generate Video", height=3, bg='black', fg='white', command=genVideo)
-        button2.grid(row=3, column=0, columnspan=3, sticky="news")
-        button2.configure(state="disabled")
-
 
 def genVideo():
         maxsize = (CONST_videoWidth, CONST_videoHeight)
@@ -592,7 +585,7 @@ def genVideo():
 
         curFrame = 0
 
-        while (curFrame < len(graph_video)):
+        while (curFrame < len(replayCache)):
 
                 videoFrame = replayCache[curFrame]
                 videoFrame = cv2.resize(videoFrame, maxsize)
@@ -617,21 +610,14 @@ def genVideo():
                 curFrame += 1
 
         out.release()
-        """
-        height, width, layers =  np.array(graph_video[0]).shape
-        video = cv2.VideoWriter("demo3_4.avi", fourcc, 10, (width,height))
-        i = 0
-        while i < 70:
-                video.write(cv2.cvtColor(np.array(graph_video[i]), cv2.COLOR_RGB2BGR))
-                i += 1
-        video.release()
-        """
+
 
 root = tk.Tk()
 menu = tk.Menu(root)
 flag = 0
 flag2 = 1
 flag3 = 0
+flag4 = 0
 tx1 = [0 for i in range(100)]
 ty1 = [0 for i in range(100)]
 tz1 = [0 for i in range(100)]
@@ -645,9 +631,8 @@ graph_video = []
 simul = None
 timer = None
 subRoot = None
-button2 = None
+button1 = None
 gray15 = (40, 40, 40)
-number123 = 0
 root.title("CSPS")
 root.iconbitmap(default='CSPS_HR.ico')
 root.config(menu=menu, background='black')
@@ -665,7 +650,7 @@ helpMenu = tk.Menu(menu)
 menu.add_cascade(label="Help", menu=helpMenu)
 helpMenu.add_command(label="About", command=about)
 
-button = tk.Button(text="Show", height=8, bg='green', fg='black', command=call)
+button = tk.Button(text="Show", height=8, bg='green', fg='black', state="disabled", command=call)
 button.grid(row=1, column=0, columnspan=3, sticky="news")
 
 video = tk.Label(root)
