@@ -270,12 +270,16 @@ class CSPS(tk.Frame):
 
         # Code to replay a impact recording - Ishan
         def replay(self):
-                global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, timer, simul, flag4
+                global replay_video, replay_on, replay_frame, replay_sensor_graph, tx1, ty1, tz1, tx2, ty2, tz2, timer, simul, flag4, graph_video
 
                 if (len(replayCache) < 1):
                         replay_video.configure(text="No Impact so far")
                         replay_on = False
                         return
+
+                if replay_frame == 0:
+                    graph_video = []
+
                 rframe = replayCache[int(replay_frame)]
 
                 curWidth = replay_video.winfo_width()
@@ -288,6 +292,11 @@ class CSPS(tk.Frame):
                 imgtk = ImageTk.PhotoImage(image=img)
                 replay_video.imgtk = imgtk
                 replay_video.configure(image=imgtk)
+
+                msTimer = str(int(float(replayTimeCache[int(replay_frame)]-replayTimeCache[0])*1000))+"ms"
+                impactStartTime = str(int(float(impactsAt[0]-replayTimeCache[0])*1000))+"ms"
+                impactEndTime = str(int(float(impactsAt[len(impactsAt)-1]-replayTimeCache[0])*1000))+"ms"
+                timer.configure(text= "Impact from " + impactStartTime +  " to " + impactEndTime + " (Time elapsed: " + msTimer + ")", fg="red", bg="black")
 
                 w = replay_sensor_graph.winfo_width()
                 h = replay_sensor_graph.winfo_height()
@@ -408,7 +417,7 @@ class CSPS(tk.Frame):
                 draw.line(coordsZ, fill="green", width=1)
                 draw.line(coordsT1_1, fill="white", width=1)
                 draw.line(coordsT1_2, fill="white", width=1)
-
+                draw.text((200, 25), "Impact from " + impactStartTime +  " to " + impactEndTime + " (Time elapsed: " + msTimer + ")", fill="white")
                 draw.line(coordsX2, fill="blue", width=1)
                 draw.line(coordsY2, fill="red", width=1)
                 draw.line(coordsZ2, fill="green", width=1)
@@ -420,12 +429,6 @@ class CSPS(tk.Frame):
                         graph_video.append(image1)
                 else:
                         graph_video.append(image1)
-
-                msTimer = str(int(float(replayTimeCache[int(replay_frame)]-replayTimeCache[0])*1000))+"ms"
-                impactStartTime = str(int(float(impactsAt[0]-replayTimeCache[0])*1000))+"ms"
-                impactEndTime = str(int(float(impactsAt[len(impactsAt)-1]-replayTimeCache[0])*1000))+"ms"
-                timer.configure(text= "Impact from " + impactStartTime +  " to " + impactEndTime + " (Time elapsed: " + msTimer + ")", fg="red", bg="black")
-                           
 
                 replay_frame += 1 / CONST_slowDown
 
@@ -448,6 +451,7 @@ class CSPS(tk.Frame):
                         replay_on = False
                         replay_frame = 0
                         flag4 = 1
+
                         tx1 = [0 for i in range(100)]
                         ty1 = [0 for i in range(100)]
                         tz1 = [0 for i in range(100)]
@@ -455,6 +459,7 @@ class CSPS(tk.Frame):
                         tx2 = [0 for i in range(100)]
                         ty2 = [0 for i in range(100)]
                         tz2 = [0 for i in range(100)]
+                        
 
         def show(self):
                 global flag, flag2
