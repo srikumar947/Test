@@ -21,8 +21,8 @@ CONST_slowDown = 1.0
 CONST_cacheLimit = 1000 / CONST_videoRateMs * CONST_replayDuration * CONST_processingSlack
 CONST_panelWidth = 300
 CONST_panelHeight = 300
-CONST_videoWidth = 1100
-CONST_videoHeight = 1100
+CONST_videoWidth = 382
+CONST_videoHeight = 866
 CONST_ImpactGroupTimeThreshold = 1
 
 # flags to check for replay and recordings - Ishan
@@ -63,13 +63,13 @@ class CSPS(tk.Frame):
 		self.canvas = tk.Canvas(self, background="black")
 		self.canvas.bind("<Configure>", self.on_resize)
 		self.canvas.grid(sticky="news")
-		self.heading = self.canvas.create_text(200, 50, tag='heading', fill="white", text="Sensor Data", width=3)
+		self.heading = self.canvas.create_text(200, 50, tag='heading', fill="white", text="Sensor Data")
 		self.canvas.create_line((0, 0, 0, 0), tag='X', fill='red', width=1)
 		self.canvas.create_line((0, 0, 0, 0), tag='Y', fill='blue', width=1)
 		self.canvas.create_line((0, 0, 0, 0), tag='Z', fill='green', width=1)
 		self.canvas.create_line((0, 0, 0, 0), tag='T1_1', fill='white', dash=(1,), width=1)
 		self.canvas.create_line((0, 0, 0, 0), tag='T1_2', fill='white', dash=(1,), width=1)
-		self.text1 = self.canvas.create_text(200, 300, tag='text1', fill="white", text="Rotational Acceleration \n (Radians/sec)")
+		self.text1 = self.canvas.create_text(200, 350, tag='text1', fill="white", text="Rotational Acceleration \n (Radians/sec)")
 		self.canvas.create_line((0, 0, 0, 0), tag='X2', fill='red', width=1)
 		self.canvas.create_line((0, 0, 0, 0), tag='Y2', fill='blue', width=1)
 		self.canvas.create_line((0, 0, 0, 0), tag='Z2', fill='green', width=1)
@@ -442,7 +442,7 @@ class CSPS(tk.Frame):
 		frame = cv2.imread(filename)
 		cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
 		img = Image.fromarray(cv2image)
-		img = img.resize((400, 300), Image.ANTIALIAS)
+		img = img.resize((324, 850), Image.ANTIALIAS)
 		imgtk = ImageTk.PhotoImage(image=img)
 		simul.imgtk = imgtk
 		simul.configure(image=imgtk)
@@ -458,6 +458,7 @@ class CSPS(tk.Frame):
 			tx2 = [0 for i in range(100)]
 			ty2 = [0 for i in range(100)]
 			tz2 = [0 for i in range(100)]
+
 
 	def show(self):
 		global flag, flag2
@@ -537,6 +538,7 @@ def call():
 	subRoot.rowconfigure(0, weight=1)
 	subRoot.protocol('WM_DELETE_WINDOW', setFlag)
 	subRoot.wm_state("zoomed")
+	# subRoot.attributes("-fullscreen", True)
 	file = tk.Menu(subMenu)
 	subMenu.add_cascade(label="File", menu=file)
 	file.add_command(label="Exit", command=exit_sub)
@@ -555,22 +557,23 @@ def call():
 	replay_sensor_graph.grid(sticky="news")
 	replay_sensor_graph.grid_rowconfigure(0, weight=1)
 	replay_sensor_graph.grid_columnconfigure(0, weight=1)
-
+	heading = replay_sensor_graph.create_text(200, 50, tag='heading', fill="white", text="Sensor Data")
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='X', fill='red', width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='Y', fill='blue', width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='Z', fill='green', width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='T1_1', fill='white', dash=(1,), width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='T1_2', fill='white', dash=(1,), width=1)
-
+	text1 = replay_sensor_graph.create_text(200, 350, tag='text1', fill="white", text="Rotational Acceleration \n (Radians/sec)")
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='X2', fill='red', width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='Y2', fill='blue', width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='Z2', fill='green', width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='T2_1', fill='white', dash=(1,), width=1)
 	replay_sensor_graph.create_line((0, 0, 0, 0), tag='T2_2', fill='white', dash=(1,), width=1)
+	text2 = replay_sensor_graph.create_text(200, 800, tag='text2', fill="white", text="Linear Acceleration \n (Meters/sec^2)")
 
 	simul = tk.Label(subRoot)
 	simul.grid(row=0, column=2, sticky="news")
-	simul.configure(width=400, height=300)
+	simul.configure(width=324, height=850)
 	#timer = tk.Label(subRoot)
 	#timer.grid(row=0, column=1, sticky="news")
 
@@ -579,20 +582,23 @@ def call():
 
 
 def genVideo():
-	maxsize = (CONST_videoWidth, CONST_videoHeight)
+	#maxsize = (CONST_videoWidth, CONST_videoHeight)
+	videosize = (1206, 866)
+	graphsize = (382, 866)
+	simulationsize = (324, 866)
 	fourcc = cv2.VideoWriter_fourcc(*'XVID')
 
-	out = cv2.VideoWriter('VideoOfImpact.avi', fourcc, 10.0, (int(CONST_videoWidth * 3.33), CONST_videoHeight))
+	out = cv2.VideoWriter('VideoOfImpact.avi', fourcc, 10.0, (1912, 866))
 
 	curFrame = 0
 
 	while (curFrame < len(replayCache)):
 
 		videoFrame = replayCache[curFrame]
-		videoFrame = cv2.resize(videoFrame, maxsize)
+		videoFrame = cv2.resize(videoFrame, videosize)
 
 		sensorFrame = np.array(graphCacheReplay[curFrame], dtype=np.uint8)
-		sensorFrame = cv2.resize(sensorFrame, maxsize)
+		sensorFrame = cv2.resize(sensorFrame, graphsize)
 
 		offset = 15
 		number = offset + curFrame
@@ -600,7 +606,7 @@ def genVideo():
 			number = 104
 		filename = "./Simulation/frame" + str(int(number)) + ".jpg"
 		simulFrame = cv2.imread(filename)
-		simulFrame = cv2.resize(simulFrame, (int(CONST_videoWidth * 1.33), CONST_videoHeight))
+		simulFrame = cv2.resize(simulFrame, simulationsize)
 
 		combinedFrame = np.concatenate((videoFrame, sensorFrame, simulFrame), axis=1)
 		out.write(combinedFrame)
