@@ -14,7 +14,7 @@ import random
 import timeit
 
 # constants for framerates replay duration etc - Ishan
-CONST_videoRateMs = 10
+CONST_videoRateMs = 20
 CONST_replayDuration = 1
 CONST_processingSlack = 0.7
 CONST_slowDown = 1.0
@@ -430,7 +430,7 @@ class CSPS(tk.Frame):
 		msTimer = str(int(float(replayTimeCache[int(replay_frame)] - replayTimeCache[0]) * 1000)) + "ms"
 		impactStartTime = str(int(float(impactsAt[0] - replayTimeCache[0]) * 1000)) + "ms"
 		impactEndTime = str(int(float(impactsAt[len(impactsAt) - 1] - replayTimeCache[0]) * 1000)) + "ms"
-		#timer.configure(text="Impact from " + impactStartTime + " to " + impactEndTime + " (Time elapsed: " + msTimer + ")", fg="red", bg="black", justify="center")
+		timer.configure(text="Impact from " + impactStartTime + " to " + impactEndTime + " (Time elapsed: " + msTimer + ")")
 
 		replay_frame += 1 / CONST_slowDown
 
@@ -544,11 +544,11 @@ def call():
 	file.add_command(label="Exit", command=exit_sub)
 
 	replay_video = tk.Label(subRoot)
-	replay_video.grid(row=0, column=0, sticky="news")
+	replay_video.grid(row=1, column=0, sticky="news")
 	replay_video.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 
 	replay_sensor = tk.Label(subRoot)
-	replay_sensor.grid(row=0, column=1, sticky="news")
+	replay_sensor.grid(row=1, column=1, sticky="news")
 	replay_sensor.configure(width=CONST_panelWidth, height=CONST_panelHeight)
 	replay_sensor.grid_rowconfigure(0, weight=1)
 	replay_sensor.grid_columnconfigure(0, weight=1)
@@ -572,13 +572,14 @@ def call():
 	text2 = replay_sensor_graph.create_text(200, 800, tag='text2', fill="white", text="Linear Acceleration \n (Meters/sec^2)")
 
 	simul = tk.Label(subRoot)
-	simul.grid(row=0, column=2, sticky="news")
+	simul.grid(row=1, column=2, sticky="news")
 	simul.configure(width=324, height=850)
-	#timer = tk.Label(subRoot)
-	#timer.grid(row=0, column=1, sticky="news")
+	
+	timer = tk.Label(subRoot, height=4, fg="red", bg="black", justify="center", font=("Courier", 16))
+	timer.grid(row=0, column=0, columnspan=3, sticky="news")
 
-	button1 = tk.Button(subRoot, text="Detailed Brain Reuslts", height=8, bg='black', fg='white', command=pickRandomImage)
-	button1.grid(row=1, column=0, columnspan=3, sticky="news")
+	button1 = tk.Button(subRoot, text="Detailed Brain Reuslts", height=2, bg='black', fg='white', command=pickRandomImage)
+	button1.grid(row=2, column=0, columnspan=3, sticky="news")
 
 
 def genVideo():
