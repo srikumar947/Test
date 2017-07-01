@@ -18,7 +18,7 @@ import os
 
 no_sensor_api = False
 
-if os.name == 'darwin':
+if os.name == 'posix':
     no_sensor_api = True
 
 # constants for framerates replay duration etc - Ishan
@@ -731,7 +731,7 @@ button.grid(row=1, column=0, columnspan=3, sticky="news")
 video = tk.Label(root)
 video.grid(row=0, column=0, sticky="news")
 video.configure(width=CONST_panelWidth, height=CONST_panelHeight)
-capture = cv2.VideoCapture(1)
+capture = cv2.VideoCapture(0)
 
 sensor = tk.Label(root)
 sensor.grid(row=0, column=1, sticky="news")
