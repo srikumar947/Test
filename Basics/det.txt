@@ -1,0 +1,5 @@
+pyinstaller -y --clean --windowed --exclude-module _tkinter --exclude-module Tkinter --exclude-module enchant --exclude-module twisted test.py
+pyinstaller -y --clean --windowed test.spec
+pushd dist
+hdiutil create ./test.dmg -srcfolder test.app -ov
+popd
