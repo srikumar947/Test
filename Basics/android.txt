@@ -1,0 +1,3 @@
+title=Test
+author=sK
+orientation=portrait
